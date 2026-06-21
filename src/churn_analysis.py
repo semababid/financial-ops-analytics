@@ -1,20 +1,14 @@
-"""Customer churn & retention analysis for Olist.
+"""Churn / retention analysis.
 
-Two complementary views:
+Two parts. First the usual RFM segmentation (recency/frequency/monetary per
+customer_unique_id, bucketed into Champions / At Risk / etc.).
 
-1. RFM segmentation
-   Recency / Frequency / Monetary scores per `customer_unique_id`, bucketed
-   into actionable segments (Champions, Loyal, At Risk, Hibernating, ...).
+Second, a repeat-purchase model. Almost everyone here buys exactly once, so
+"churn" doesn't really fit the classic definition - I framed it the other way
+round: given only what we know from a customer's *first* order, can we predict
+whether they ever come back? That's the thing Olist could actually act on.
 
-2. Repeat-purchase ("anti-churn") model
-   Olist customers overwhelmingly buy once, so "churn" here is framed as the
-   inverse of *repeat purchase within the observation window*. We engineer
-   features from a customer's FIRST order (the only signal available at
-   acquisition) and train a classifier to predict whether they buy again.
-   This is the lever Olist can actually pull: which first-order experiences
-   predict a second order.
-
-Run:  python -m src.churn_analysis
+    python -m src.churn_analysis
 """
 from __future__ import annotations
 
@@ -41,9 +35,7 @@ def _load_orders() -> pd.DataFrame:
     return df[df["is_valid_revenue"]].copy()
 
 
-# --------------------------------------------------------------------------- #
-# 1. RFM segmentation
-# --------------------------------------------------------------------------- #
+# --- RFM segmentation ---
 def build_rfm(orders: pd.DataFrame) -> pd.DataFrame:
     snapshot = orders["order_purchase_timestamp"].max() + pd.Timedelta(days=SNAPSHOT_OFFSET_DAYS)
     rfm = (
@@ -94,9 +86,7 @@ def plot_segments(rfm: pd.DataFrame) -> None:
     plotting.save(fig, "09_rfm_segments")
 
 
-# --------------------------------------------------------------------------- #
-# 2. Repeat-purchase model
-# --------------------------------------------------------------------------- #
+# --- Repeat-purchase model ---
 def build_repeat_dataset(orders: pd.DataFrame) -> pd.DataFrame:
     """One row per customer; features from their FIRST order, label = repeated?"""
     orders = orders.sort_values("order_purchase_timestamp")

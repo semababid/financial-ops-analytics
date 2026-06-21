@@ -1,21 +1,18 @@
-"""Profitability analysis for the Olist marketplace.
+"""Profitability analysis.
 
-Olist is a platform, not a retailer: it does not keep item revenue, it earns a
-*commission* on GMV and incurs payment-processing cost. We model a stylised
-contribution margin per order item:
+Olist is a platform, not a shop - it doesn't keep the item price, it takes a
+commission and pays the payment processor. So per order item I work out:
 
-    commission_revenue = COMMISSION_RATE      * item_price
-    payment_cost       = PAYMENT_PROCESSING_RATE * (item_price + freight)
-    contribution       = commission_revenue - payment_cost
+    contribution = 0.15 * price  -  0.025 * (price + freight)
 
-Freight is shown separately because it is largely pass-through to the carrier
-but still a lever (free-shipping promos, heavy/low-value items erode margin).
+(rates live in config.py). Freight gets reported separately because it's mostly
+pass-through to the carrier but still a real lever - free-shipping promos and
+cheap heavy items quietly eat the margin.
 
-These rates are assumptions (see config.py) — the analysis is about *relative*
-profitability across categories, sellers and regions, which is robust to the
-exact take-rate chosen.
+The point is the *relative* ranking across categories/sellers/regions, which
+doesn't really move if you change the take-rate.
 
-Run:  python -m src.profitability
+    python -m src.profitability
 """
 from __future__ import annotations
 

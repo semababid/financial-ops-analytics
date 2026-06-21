@@ -1,22 +1,12 @@
-"""Monthly revenue forecasting for Olist.
+"""Monthly revenue forecasting.
 
-Approach
---------
-The series is short (20 dense months) and trends steeply through 2017 before
-flattening in 2018, so we run a small, honest bake-off and let a holdout
-backtest pick the winner rather than trusting AIC on so few points:
+Only ~20 usable months and a steep ramp into a plateau, so I didn't trust AIC to
+pick a model on that few points. Instead I try a handful of candidates (a naive
+baseline, a small SARIMA grid, damped Holt-Winters), hold out the last few
+months, and keep whichever has the lowest MAPE there. Then refit on everything
+and project forward with a band.
 
-  * Baseline      : last value carried forward by the train window's mean
-    month-over-month growth.
-  * SARIMA grid   : a few small SARIMAX orders on log revenue.
-  * Holt-Winters  : exponential smoothing with a *damped* additive trend, which
-    is well suited to a series that decelerates into a plateau.
-
-We backtest on the last `TEST_MONTHS` months (MAPE/RMSE), select the model with
-the best holdout MAPE, refit it on the full series, and project
-`FORECAST_MONTHS` ahead with a confidence band.
-
-Run:  python -m src.revenue_forecast
+    python -m src.revenue_forecast
 """
 from __future__ import annotations
 

@@ -1,92 +1,69 @@
 # Financial Operations Analytics
 
-Revenue forecasting, churn, and profitability analysis on the
-**Brazilian E-Commerce (Olist)** public dataset.
+This is an end-to-end analysis of the public **Olist** Brazilian e-commerce
+dataset, looking at it from a finance/ops angle: where the revenue comes from,
+whether customers come back, and which parts of the business actually make
+money once you account for freight and payment costs.
 
-> Olist is a Brazilian marketplace connecting small sellers to large
-> storefronts. The dataset covers ~100k orders from 2016–2018, with order
-> items, payments, reviews, customers, sellers, products and geolocation.
+I picked Olist because it's messy in the way real transactional data is — nine
+separate tables, multiple payment rows per order, the "customer" key isn't what
+you'd expect — so it was a good excuse to practice building a proper pipeline
+instead of working off one clean CSV.
 
-## Goals
+## What I found
 
-1. **Revenue forecasting** — model monthly GMV / revenue and project forward.
-2. **Churn analysis** — segment customers (RFM) and predict repeat purchase.
-3. **Profitability** — margins by category, seller and region; freight and
-   payment economics.
-
-## Key results
-
-| | |
-|---|---|
-| Revenue (GMV) | **R$ 13.4M** over Jan 2017 – Aug 2018 |
-| Repeat-buyer share | **3.0%** → retention is the biggest untapped lever |
-| Forecast accuracy | **10.7% MAPE** (SARIMA, 4-month backtest) |
-| Targeting lift | top propensity decile finds repeaters **1.8×** better than random |
-| Margin insight | **freight (16.6% of GMV) > contribution (12.1%)** — logistics is the #1 margin lever |
-
-**Revenue grew ~6× then plateaued; the forecast is honestly flat at ~R$855K/mo.**
+- **R$ 13.4M** in realized revenue across Jan 2017 – Aug 2018, growing roughly
+  6× before flattening out into a ~R$1M/month plateau through 2018.
+- Only **3% of customers ever order again.** That was the headline for me —
+  acquisition is doing its job, retention basically isn't, so that's where the
+  upside is.
+- Best revenue forecast came in at **10.7% MAPE** on a 4-month holdout. The
+  winning model just projects a flat ~R$855K/month, which felt anticlimactic
+  until I realized that's the honest answer for a plateaued series.
+- **Freight (16.6% of GMV) costs more than the platform's contribution margin
+  (12.1%).** Logistics, not product mix, is the real margin lever here.
 
 ![Monthly revenue & forecast](reports/figures/08_forecast_projection.png)
 
-| Customer segments (RFM) | Repeat-purchase targeting |
+RFM customer segments and the repeat-purchase targeting model:
+
+| | |
 |---|---|
 | ![RFM segments](reports/figures/09_rfm_segments.png) | ![Repeat lift](reports/figures/11_repeat_lift.png) |
 
-| Category profitability | Freight drag |
+Profitability by category, and the freight-drag view that explains most of it:
+
+| | |
 |---|---|
 | ![Category profitability](reports/figures/12_category_profitability.png) | ![Freight drag](reports/figures/13_freight_drag.png) |
 
-Full write-up with recommendations and caveats: **[reports/SUMMARY.md](reports/SUMMARY.md)**.
+The longer write-up with the recommendations is in
+[reports/SUMMARY.md](reports/SUMMARY.md).
 
-## Project layout
-
-```
-financial-ops-analytics/
-├── data/
-│   ├── raw/          # 9 Olist CSVs (git-ignored, ~120 MB)
-│   └── processed/    # cleaned parquet tables (git-ignored)
-├── src/
-│   ├── config.py         # paths + business constants
-│   ├── data_loader.py    # typed loaders for each raw CSV
-│   ├── data_cleaning.py  # builds master / order-level / monthly tables
-│   ├── eda.py
-│   ├── revenue_forecast.py
-│   ├── churn_analysis.py
-│   ├── profitability.py
-│   └── sql_runner.py     # runs sql/analytics.sql via DuckDB
-├── sql/analytics.sql # core metrics expressed in SQL
-├── app.py            # Streamlit dashboard
-├── scripts/          # runnable entry points (run_pipeline.py)
-├── reports/figures/  # generated charts
-└── requirements.txt
-```
-
-## Setup
+## Running it
 
 ```bash
 pip install -r requirements.txt
 
-# Place the Kaggle "Brazilian E-Commerce by Olist" archive.zip, then:
+# grab the Kaggle "Brazilian E-Commerce by Olist" archive, then:
 unzip archive.zip -d data/raw
 
-# Build processed tables (parquet) from raw CSVs:
-python -m src.data_cleaning
-
-# Or run the whole analysis end to end (tables + EDA + forecast + churn + margin):
-python scripts/run_pipeline.py
+python scripts/run_pipeline.py     # builds tables + runs every analysis
 ```
 
-Individual stages: `python -m src.eda` · `src.revenue_forecast` ·
-`src.churn_analysis` · `src.profitability`. Figures land in `reports/figures/`.
+`run_pipeline.py` does everything, but each stage also runs on its own:
+`python -m src.eda`, `src.revenue_forecast`, `src.churn_analysis`,
+`src.profitability`. Charts get written to `reports/figures/`.
 
-**SQL metrics (DuckDB over parquet):**
+There's also a SQL version of the core metrics (DuckDB reading the parquet files
+directly, no database to set up):
 
 ```bash
-python -m src.sql_runner                 # run all queries in sql/analytics.sql
-python -m src.sql_runner top_categories  # run one by name
+python -m src.sql_runner                 # all queries
+python -m src.sql_runner top_categories  # just one
 ```
 
-**Interactive dashboard (Streamlit):**
+And a Streamlit dashboard:
 
 ```bash
 streamlit run app.py
@@ -94,31 +71,39 @@ streamlit run app.py
 
 ![Streamlit dashboard](reports/figures/dashboard.png)
 
-## Data model (processed)
+## How the data is organized
 
-| Table | Grain | Use |
-|-------|-------|-----|
-| `orders_master`   | one row per **order item** | category / seller / profitability |
-| `order_level`     | one row per **order**      | churn, forecasting inputs |
-| `monthly_revenue` | one row per **month**      | time-series forecasting |
+After cleaning, everything reduces to three parquet tables at different grains:
 
-**Modeling conventions**
-- Revenue is recognized from item `price` (excludes freight, installments, vouchers).
-- `customer_unique_id` is the true customer; `customer_id` is per-order.
-- Only `delivered` / `shipped` / `invoiced` orders count as realized revenue.
+| Table | One row per | Used for |
+|-------|-------------|----------|
+| `orders_master`   | order item | category / seller / profitability |
+| `order_level`     | order      | churn, forecasting inputs |
+| `monthly_revenue` | month      | the time series |
 
-## Status
+A few decisions worth calling out, since they drove most of the numbers:
 
-- [x] Phase 0 — scaffold
-- [x] Phase 1 — data ingestion & cleaning pipeline
-- [x] Phase 2 — exploratory data analysis (`python -m src.eda`)
-- [x] Phase 3 — revenue forecasting (`python -m src.revenue_forecast`)
-- [x] Phase 4 — churn analysis (`python -m src.churn_analysis`)
-- [x] Phase 5 — profitability analysis (`python -m src.profitability`)
-- [x] Phase 6 — pipeline runner + findings summary
-- [x] SQL analytics layer (DuckDB) + Streamlit dashboard
+- I count revenue from the item `price`, not `payment_value` — `payment_value`
+  bundles in freight and gets distorted by installments and vouchers.
+- `customer_unique_id` is the real person. `customer_id` is regenerated per
+  order, so using it would have made the repeat rate look like ~0%. This tripped
+  me up at first.
+- Only `delivered` / `shipped` / `invoiced` orders count as realized revenue;
+  canceled and unavailable ones are flagged and dropped from the totals.
+
+## Things I'd flag / would do next
+
+- The series is only ~20 dense months, so anything past a 6-month forecast is
+  guesswork. I kept the models small on purpose rather than pretend otherwise.
+- The repeat-purchase model is weak (ROC-AUC ~0.61). Rather than dress that up,
+  I report it as decile lift — the top decile still finds repeaters ~1.8× better
+  than random, which is the part that's actually useful for targeting.
+- The commission/payment-fee rates in the profitability model are assumptions
+  (`src/config.py`); the *rankings* hold regardless of the exact take-rate.
+- Next things on my list: a customer-lifetime-value model, and using the
+  geolocation table to tie freight cost to shipping distance.
 
 ## Dataset
 
-Kaggle: *Brazilian E-Commerce Public Dataset by Olist* (CC BY-NC-SA 4.0).
-Raw CSVs are not committed; download them from Kaggle and unzip into `data/raw/`.
+Kaggle — *Brazilian E-Commerce Public Dataset by Olist* (CC BY-NC-SA 4.0). The
+raw CSVs (~120 MB) aren't committed; download them and unzip into `data/raw/`.

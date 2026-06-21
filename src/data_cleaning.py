@@ -1,20 +1,14 @@
-"""Build clean, analysis-ready tables from the raw Olist star schema.
+"""Turn the nine raw Olist CSVs into three tidy parquet tables.
 
-Outputs (written to data/processed/ as parquet):
-  - orders_master.parquet : one row per ORDER ITEM, fully enriched (the grain
-    at which price/freight live). Use for category/seller/profitability work.
-  - order_level.parquet    : one row per ORDER, with item totals, payment info,
-    customer key, review score and delivery timing. Use for churn/forecasting.
-  - monthly_revenue.parquet: monthly revenue time series for forecasting.
+  - orders_master   : one row per order item (this is where price/freight live),
+                      enriched with order, customer, product and seller info.
+  - order_level     : one row per order - item totals, payment, review, delivery.
+  - monthly_revenue : the monthly time series used for forecasting.
 
-Design notes
-------------
-* Revenue is recognized from ``price`` (item value), not ``payment_value``
-  (which includes freight and is affected by installments/vouchers).
-* ``customer_unique_id`` is the true person; ``customer_id`` is per-order. All
-  customer-level work keys on ``customer_unique_id``.
-* Only ``VALID_REVENUE_STATUSES`` count as realized revenue. Canceled and
-  unavailable orders are flagged but excluded from revenue aggregates.
+Couple of gotchas that the rest of the project relies on:
+revenue comes from `price`, not `payment_value` (payment_value folds in freight
+and installments); and `customer_unique_id` - not `customer_id` - is the real
+person, which matters a lot for the repeat-purchase numbers.
 """
 from __future__ import annotations
 
