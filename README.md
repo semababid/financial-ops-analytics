@@ -43,7 +43,15 @@ unzip archive.zip -d data/raw
 
 # Build processed tables (parquet) from raw CSVs:
 python -m src.data_cleaning
+
+# Or run the whole analysis end to end (tables + EDA + forecast + churn + margin):
+python scripts/run_pipeline.py
 ```
+
+Individual stages: `python -m src.eda` · `src.revenue_forecast` ·
+`src.churn_analysis` · `src.profitability`. Figures land in `reports/figures/`.
+
+**Findings write-up:** [reports/SUMMARY.md](reports/SUMMARY.md).
 
 ## Data model (processed)
 
@@ -65,7 +73,8 @@ python -m src.data_cleaning
 - [x] Phase 2 — exploratory data analysis (`python -m src.eda`)
 - [x] Phase 3 — revenue forecasting (`python -m src.revenue_forecast`)
 - [x] Phase 4 — churn analysis (`python -m src.churn_analysis`)
-- [ ] Phase 5 — profitability analysis
+- [x] Phase 5 — profitability analysis (`python -m src.profitability`)
+- [x] Phase 6 — pipeline runner + findings summary
 
 ## Dataset
 
