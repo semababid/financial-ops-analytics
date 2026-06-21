@@ -14,5 +14,9 @@ matplotlib>=3.7
 seaborn>=0.12
 plotly>=5.0
 
+# SQL analytics + dashboard
+duckdb>=0.9
+streamlit>=1.30
+
 # Notebooks
 jupyter

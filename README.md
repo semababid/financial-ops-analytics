@@ -14,6 +14,30 @@ Revenue forecasting, churn, and profitability analysis on the
 3. **Profitability** — margins by category, seller and region; freight and
    payment economics.
 
+## Key results
+
+| | |
+|---|---|
+| Revenue (GMV) | **R$ 13.4M** over Jan 2017 – Aug 2018 |
+| Repeat-buyer share | **3.0%** → retention is the biggest untapped lever |
+| Forecast accuracy | **10.7% MAPE** (SARIMA, 4-month backtest) |
+| Targeting lift | top propensity decile finds repeaters **1.8×** better than random |
+| Margin insight | **freight (16.6% of GMV) > contribution (12.1%)** — logistics is the #1 margin lever |
+
+**Revenue grew ~6× then plateaued; the forecast is honestly flat at ~R$855K/mo.**
+
+![Monthly revenue & forecast](reports/figures/08_forecast_projection.png)
+
+| Customer segments (RFM) | Repeat-purchase targeting |
+|---|---|
+| ![RFM segments](reports/figures/09_rfm_segments.png) | ![Repeat lift](reports/figures/11_repeat_lift.png) |
+
+| Category profitability | Freight drag |
+|---|---|
+| ![Category profitability](reports/figures/12_category_profitability.png) | ![Freight drag](reports/figures/13_freight_drag.png) |
+
+Full write-up with recommendations and caveats: **[reports/SUMMARY.md](reports/SUMMARY.md)**.
+
 ## Project layout
 
 ```
@@ -25,10 +49,14 @@ financial-ops-analytics/
 │   ├── config.py         # paths + business constants
 │   ├── data_loader.py    # typed loaders for each raw CSV
 │   ├── data_cleaning.py  # builds master / order-level / monthly tables
+│   ├── eda.py
 │   ├── revenue_forecast.py
 │   ├── churn_analysis.py
-│   └── profitability.py
-├── scripts/          # runnable entry points
+│   ├── profitability.py
+│   └── sql_runner.py     # runs sql/analytics.sql via DuckDB
+├── sql/analytics.sql # core metrics expressed in SQL
+├── app.py            # Streamlit dashboard
+├── scripts/          # runnable entry points (run_pipeline.py)
 ├── reports/figures/  # generated charts
 └── requirements.txt
 ```
@@ -51,7 +79,18 @@ python scripts/run_pipeline.py
 Individual stages: `python -m src.eda` · `src.revenue_forecast` ·
 `src.churn_analysis` · `src.profitability`. Figures land in `reports/figures/`.
 
-**Findings write-up:** [reports/SUMMARY.md](reports/SUMMARY.md).
+**SQL metrics (DuckDB over parquet):**
+
+```bash
+python -m src.sql_runner                 # run all queries in sql/analytics.sql
+python -m src.sql_runner top_categories  # run one by name
+```
+
+**Interactive dashboard (Streamlit):**
+
+```bash
+streamlit run app.py
+```
 
 ## Data model (processed)
 
@@ -75,6 +114,7 @@ Individual stages: `python -m src.eda` · `src.revenue_forecast` ·
 - [x] Phase 4 — churn analysis (`python -m src.churn_analysis`)
 - [x] Phase 5 — profitability analysis (`python -m src.profitability`)
 - [x] Phase 6 — pipeline runner + findings summary
+- [x] SQL analytics layer (DuckDB) + Streamlit dashboard
 
 ## Dataset
 
