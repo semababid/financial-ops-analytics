@@ -1,0 +1,20 @@
+# Data — raw CSVs are large (~120MB) and reproducible from Kaggle, so not committed.
+data/raw/
+data/processed/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Notebook output that is large
+*.parquet
