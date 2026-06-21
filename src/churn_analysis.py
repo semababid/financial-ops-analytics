@@ -22,8 +22,9 @@ import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, roc_auc_score
+from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
@@ -121,9 +122,12 @@ def train_repeat_model(data: pd.DataFrame) -> dict:
     num = X.select_dtypes("number").columns.tolist()
     cat = X.select_dtypes("object").columns.tolist()
 
+    num_pipe = Pipeline(
+        [("impute", SimpleImputer(strategy="median")), ("scale", StandardScaler())]
+    )
     pre = ColumnTransformer(
         [
-            ("num", StandardScaler(), num),
+            ("num", num_pipe, num),
             ("cat", OneHotEncoder(handle_unknown="ignore", min_frequency=50), cat),
         ]
     )
@@ -148,10 +152,31 @@ def train_repeat_model(data: pd.DataFrame) -> dict:
     proba = best_pipe.predict_proba(X_te)[:, 1]
     return {
         "scores": scores, "best": best, "pipe": best_pipe,
-        "y_te": y_te, "proba": proba, "num": num, "cat": cat,
-        "report": classification_report(y_te, (proba >= 0.5).astype(int), digits=3),
+        "y_te": y_te.reset_index(drop=True), "proba": proba,
+        "num": num, "cat": cat,
+        "lift": decile_lift(y_te.values, proba),
         "base_rate": y.mean(),
     }
+
+
+def decile_lift(y_true: np.ndarray, proba: np.ndarray) -> pd.DataFrame:
+    """Rank customers by predicted propensity, bucket into deciles, measure lift.
+
+    Lift = repeat rate in the decile / overall repeat rate. A lift of 3 in the
+    top decile means targeting that 10% finds repeaters 3x more efficiently
+    than random outreach.
+    """
+    df = pd.DataFrame({"y": y_true, "p": proba})
+    df["decile"] = pd.qcut(df["p"].rank(method="first"), 10, labels=range(10, 0, -1)).astype(int)
+    base = df["y"].mean()
+    out = (
+        df.groupby("decile")
+        .agg(customers=("y", "size"), repeaters=("y", "sum"), repeat_rate=("y", "mean"))
+        .sort_index()
+    )
+    out["lift"] = out["repeat_rate"] / base
+    out["cum_repeaters_pct"] = out["repeaters"].cumsum() / out["repeaters"].sum() * 100
+    return out
 
 
 def feature_importance(res: dict) -> pd.Series:
@@ -174,6 +199,18 @@ def plot_importance(imp: pd.Series) -> None:
     ax.set_xlabel("Importance")
     ax.set_ylabel("")
     plotting.save(fig, "10_repeat_drivers")
+
+
+def plot_lift(lift: pd.DataFrame) -> None:
+    fig, ax = plt.subplots()
+    ax.bar(lift.index, lift["lift"], color="#2a8c6f", alpha=0.85)
+    ax.axhline(1.0, color="#b5475d", ls="--", lw=2, label="random (lift = 1)")
+    ax.set_title("Repeat-Purchase Model — Lift by Decile")
+    ax.set_xlabel("Decile (1 = highest predicted propensity)")
+    ax.set_ylabel("Lift vs. base rate")
+    ax.set_xticks(range(1, 11))
+    ax.legend()
+    plotting.save(fig, "11_repeat_lift")
 
 
 def run() -> None:
@@ -202,12 +239,20 @@ def run() -> None:
     for name, auc in res["scores"].items():
         print(f"  {name:8s} ROC-AUC = {auc:.3f}")
     print(f"Best model       : {res['best']}")
-    print("\nClassification report (threshold 0.5):")
-    print(res["report"])
+
+    lift = res["lift"]
+    print("\nDecile lift (rank by predicted repeat propensity):")
+    print(f"{'decile':>6s} {'customers':>10s} {'repeat_rate':>12s} {'lift':>6s} {'cum%repeaters':>14s}")
+    for dec, row in lift.iterrows():
+        print(f"{dec:>6d} {int(row['customers']):>10,} {row['repeat_rate']*100:>11.1f}% "
+              f"{row['lift']:>6.2f} {row['cum_repeaters_pct']:>13.1f}%")
+    top_lift = lift.loc[1, "lift"]
+    print(f"\n-> Top decile finds repeaters {top_lift:.1f}x better than random outreach.")
+    plot_lift(lift)
 
     imp = feature_importance(res)
     plot_importance(imp)
-    print("Top repeat-purchase drivers:")
+    print("\nTop repeat-purchase drivers:")
     for name, val in imp.head(8).items():
         print(f"  {name:40s} {val:.3f}")
 
