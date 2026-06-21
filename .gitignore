@@ -11,10 +11,11 @@ env/
 *.egg-info/
 .ipynb_checkpoints/
 
-# OS / editor
+# OS / editor / tooling
 .DS_Store
 .idea/
 .vscode/
+.claude/
 
 # Notebook output that is large
 *.parquet
