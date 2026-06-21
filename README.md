@@ -92,6 +92,8 @@ python -m src.sql_runner top_categories  # run one by name
 streamlit run app.py
 ```
 
+![Streamlit dashboard](reports/figures/dashboard.png)
+
 ## Data model (processed)
 
 | Table | Grain | Use |

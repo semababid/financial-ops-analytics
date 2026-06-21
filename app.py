@@ -79,21 +79,21 @@ with tab_rev:
         fig.add_scatter(x=fc["order_month"], y=fc["lower"], mode="lines", fill="tonexty",
                         line=dict(width=0), name="80% interval",
                         fillcolor="rgba(181,71,93,0.15)")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     c1, c2 = st.columns(2)
     with c1:
         st.plotly_chart(
             px.bar(m, x="order_month", y="n_orders", title="Orders per Month",
                    labels={"order_month": "Month", "n_orders": "Orders"}),
-            use_container_width=True,
+            width="stretch",
         )
     with c2:
         st.plotly_chart(
             px.line(m, x="order_month", y="avg_order_value", markers=True,
                     title="Average Order Value",
                     labels={"order_month": "Month", "avg_order_value": "AOV (R$)"}),
-            use_container_width=True,
+            width="stretch",
         )
 
 # --- Churn & RFM -----------------------------------------------------------
@@ -108,16 +108,16 @@ with tab_churn:
                 px.bar(seg, x="customers", y="segment", orientation="h",
                        title="Customers per RFM Segment", color="customers",
                        color_continuous_scale="Teal"),
-                use_container_width=True,
+                width="stretch",
             )
         with c2:
             st.plotly_chart(
                 px.bar(seg, x="revenue", y="segment", orientation="h",
                        title="Revenue per RFM Segment", color="revenue",
                        color_continuous_scale="Greens"),
-                use_container_width=True,
+                width="stretch",
             )
-        st.dataframe(seg, use_container_width=True, hide_index=True)
+        st.dataframe(seg, width="stretch", hide_index=True)
     else:
         st.info("Run `python -m src.churn_analysis` to generate RFM segments.")
 
@@ -136,14 +136,14 @@ with tab_profit:
             px.bar(cat.sort_values("contribution"), x="contribution", y="category",
                    orientation="h", title="Top Categories by Contribution",
                    color="contribution", color_continuous_scale="Greens"),
-            use_container_width=True,
+            width="stretch",
         )
     with c2:
         st.plotly_chart(
             px.bar(cat.sort_values("freight_ratio"), x="freight_ratio", y="category",
                    orientation="h", title="Freight Drag (freight / price, median)",
                    color="freight_ratio", color_continuous_scale="Reds"),
-            use_container_width=True,
+            width="stretch",
         )
     st.caption(
         f"Contribution model: {config.COMMISSION_RATE:.0%} commission − "
