@@ -62,7 +62,7 @@ python -m src.data_cleaning
 
 - [x] Phase 0 — scaffold
 - [x] Phase 1 — data ingestion & cleaning pipeline
-- [ ] Phase 2 — exploratory data analysis
+- [x] Phase 2 — exploratory data analysis (`python -m src.eda`)
 - [ ] Phase 3 — revenue forecasting
 - [ ] Phase 4 — churn analysis
 - [ ] Phase 5 — profitability analysis
