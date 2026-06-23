@@ -90,8 +90,11 @@ def plot_segments(rfm: pd.DataFrame) -> None:
 def build_repeat_dataset(orders: pd.DataFrame) -> pd.DataFrame:
     """One row per customer; features from their FIRST order, label = repeated?"""
     orders = orders.sort_values("order_purchase_timestamp")
-    first = orders.groupby("customer_unique_id").first()
     counts = orders.groupby("customer_unique_id")["order_id"].count()
+    # Take the actual first *row* per customer. groupby().first() would instead
+    # take the first non-null value column-by-column, which can splice a later
+    # order's review/delivery into the "first order" features.
+    first = orders.drop_duplicates("customer_unique_id", keep="first").set_index("customer_unique_id")
 
     df = first.copy()
     df["repeat"] = (counts > 1).astype(int)

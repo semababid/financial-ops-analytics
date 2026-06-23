@@ -57,7 +57,7 @@ honest read on a plateaued series with only one year of seasonal history.
 **Repeat-purchase model** (predict a 2nd order from 1st-order features):
 ROC-AUC 0.61 — weak but real signal. Framed as targeting rather than
 classification, the **top propensity decile finds repeaters 1.8x better than
-random**, and the top 3 deciles capture 45% of all repeaters.
+random**, and the top 3 deciles capture ~42% of all repeaters.
 Strongest drivers: order value, freight, **delivery delay**, and review score.
 → `figures/09`, `10`, `11`
 
