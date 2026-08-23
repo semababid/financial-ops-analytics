@@ -47,28 +47,29 @@ def build_rfm(orders: pd.DataFrame) -> pd.DataFrame:
         )
     )
 
-    # Score 1-5. Recency is reverse-scored (recent = high). Frequency is mostly
-    # 1, so rank with ties spread out before cutting into quintiles.
+    # Recency and Monetary have real spread, so quintile scores are meaningful
+    # (recency reverse-scored: recent = 5).
     rfm["r_score"] = pd.qcut(rfm["recency"], 5, labels=[5, 4, 3, 2, 1]).astype(int)
-    rfm["f_score"] = pd.qcut(rfm["frequency"].rank(method="first"), 5, labels=[1, 2, 3, 4, 5]).astype(int)
     rfm["m_score"] = pd.qcut(rfm["monetary"], 5, labels=[1, 2, 3, 4, 5]).astype(int)
+    # Frequency is degenerate here - ~97% of customers order exactly once - so a
+    # 5-way F score would just be noise. Treat loyalty as a binary repeat flag
+    # and segment the one-time majority on recency x monetary instead.
+    rfm["is_repeat"] = rfm["frequency"] > 1
     rfm["segment"] = rfm.apply(_segment, axis=1)
     return rfm
 
 
 def _segment(row) -> str:
-    r, f = row["r_score"], row["f_score"]
-    if r >= 4 and f >= 4:
-        return "Champions"
-    if r >= 3 and f >= 3:
-        return "Loyal"
-    if r >= 4 and f <= 2:
-        return "New / Promising"
-    if r <= 2 and f >= 3:
-        return "At Risk"
-    if r <= 2 and f <= 2:
-        return "Hibernating"
-    return "Needs Attention"
+    # Repeat buyers are the genuinely loyal minority; everyone else ordered once
+    # and is placed by how recently they bought and how much they spent.
+    if row["is_repeat"]:
+        return "Loyal / Repeat"
+    r, m = row["r_score"], row["m_score"]
+    if r >= 4:
+        return "Champions" if m >= 4 else "Promising"
+    if r <= 2:
+        return "At Risk" if m >= 4 else "Hibernating"
+    return "Needs Attention"  # middle recency band
 
 
 def plot_segments(rfm: pd.DataFrame) -> None:

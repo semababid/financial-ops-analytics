@@ -43,16 +43,19 @@ honest read on a plateaued series with only one year of seasonal history.
 
 ## 3. Churn & retention
 
-**RFM segmentation** of 94.7k customers:
+**RFM segmentation** of 94.7k customers. Frequency is degenerate here — ~97% of
+customers order exactly once — so a classic 5×5 RFM would fabricate loyalty that
+isn't there. Instead loyalty is a binary repeat flag (its own segment), and the
+one-time majority is segmented on recency × monetary:
 
-| Segment | Customers | Revenue share |
-|---------|-----------|---------------|
-| At Risk | 22,540 | 24.1% |
-| Loyal | 19,069 | 19.6% |
-| Champions | 15,207 | 17.1% |
-| Hibernating | 15,172 | 15.9% |
-| New / Promising | 15,229 | 15.8% |
-| Needs Attention | 7,477 | 7.4% |
+| Segment | Customers | Revenue share | Who they are |
+|---------|-----------|---------------|--------------|
+| Champions       | 14,709 | 29.4% | recent, high-spend (prime to convert to repeat) |
+| At Risk         | 13,814 | 28.6% | were high-spend, now gone quiet |
+| Needs Attention | 18,329 | 17.8% | middle recency band |
+| Hibernating     | 22,879 |  9.5% | old and low-value |
+| Promising       | 22,087 |  9.2% | recent but low-spend |
+| Loyal / Repeat  |  2,876 |  5.6% | the ~3% who actually reorder |
 
 **Repeat-purchase model** (predict a 2nd order from 1st-order features):
 ROC-AUC 0.61 — weak but real signal. Framed as targeting rather than
@@ -90,8 +93,9 @@ Rates are assumptions; the *relative* rankings are the point.
 
 ## Recommendations
 
-1. **Retention program** targeting the model's top deciles + "At Risk" /
-   "Loyal" RFM segments, which together hold the majority of revenue.
+1. **Retention program** targeting the model's top propensity deciles plus the
+   "Champions" and "At Risk" segments (recent high-spenders to convert, and
+   lapsing high-value customers to win back) — together ~58% of revenue.
 2. **Logistics investment** (freight is the #1 margin drag) — regional fulfilment
    to cut the 17–18% freight burden in non-SP states; reconsider free-shipping
    on low-value heavy categories (electronics, telephony, food/drink).
