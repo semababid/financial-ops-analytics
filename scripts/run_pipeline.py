@@ -13,7 +13,14 @@ from pathlib import Path
 # Allow running as a plain script (python scripts/run_pipeline.py).
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src import churn_analysis, data_cleaning, eda, profitability, revenue_forecast
+from src import (
+    churn_analysis,
+    data_cleaning,
+    eda,
+    geo_analysis,
+    profitability,
+    revenue_forecast,
+)
 
 
 def main() -> None:
@@ -23,6 +30,7 @@ def main() -> None:
         ("Revenue forecasting", revenue_forecast.run),
         ("Churn analysis", churn_analysis.run),
         ("Profitability analysis", profitability.run),
+        ("Shipping distance analysis", geo_analysis.run),
     ]
     for i, (label, fn) in enumerate(steps, 1):
         print(f"\n{'#' * 70}\n# STEP {i}/{len(steps)}: {label}\n{'#' * 70}")
