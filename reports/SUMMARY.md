@@ -132,13 +132,86 @@ twice. Long routes are expensive and they also arrive late, and late delivery is
 one of the stronger repeat-purchase signals from section 3. Regional fulfilment
 would help margin and retention at once.
 
+## 6. Customer lifetime value
+
+What a customer has actually been worth so far, using the same contribution
+formula as section 4:
+
+| Metric | Value |
+|--------|-------|
+| Avg GMV per customer | R$ 141.86 |
+| Avg contribution per customer | **R$ 17.14** (12.1% of GMV) |
+| Share of contribution held by the top 10% of customers | 42% |
+
+That R$17 is the number that matters operationally: it is roughly the ceiling on
+what Olist can spend to acquire or win back a customer before the relationship
+stops paying for itself.
+
+**Empirical cohort retention.** Grouping customers by the month of their first
+order and counting who comes back, using only cohort/month cells that were fully
+observable:
+
+| Months after first order | 1 | 2 | 3 | 4 | 6 | 9 | 12 |
+|---|---|---|---|---|---|---|---|
+| % of cohort ordering again | 0.45% | 0.34% | 0.26% | 0.26% | 0.23% | 0.17% | 0.17% |
+
+Summed across 12 months that is about 2.8% of a cohort ever returning, which
+matches the 3% repeat rate from section 3. Two independent methods agreeing is
+a decent sign the pipeline is not lying to me.
+→ `figures/16`
+
+**BG/NBD and Gamma-Gamma.** I fitted the standard probabilistic CLV pair and
+validated it on a 180-day holdout:
+
+| | Value |
+|---|---|
+| Predicted repeat purchases per customer | 0.0143 |
+| Actual repeat purchases per customer | 0.0122 |
+| MAE | 0.0255 |
+| Correlation (predicted vs actual) | 0.141 |
+
+The aggregate is roughly calibrated, so the model gets the overall volume of
+repeat buying about right. Per customer it is nearly blind: a correlation of
+0.14, and 99.7% of customers predicted to make fewer than 0.1 further purchases.
+That is what a 3% repeat rate does to a model built on purchase cadence. For the
+2,059 customers with a repeat history the model can speak to, the 6-month CLV
+comes out at R$14.65 in GMV, or R$1.77 in contribution.
+
+So I would not use BG/NBD to rank individual customers here. The decile-lift
+model from section 3 is the better targeting tool, and observed contribution is
+the better value estimate.
+
+**Value by segment** (observed contribution per customer):
+
+| Segment | Avg GMV | Avg contribution |
+|---------|---------|------------------|
+| At Risk | R$ 278.08 | R$ 34.00 |
+| Champions | R$ 268.31 | R$ 32.71 |
+| Loyal / Repeat | R$ 259.96 | R$ 31.29 |
+| Needs Attention | R$ 130.26 | R$ 15.74 |
+| Hibernating | R$ 55.96 | R$ 6.56 |
+| Promising | R$ 55.71 | R$ 6.52 |
+
+The five-fold spread between the top and bottom segments is useful evidence that
+the section 3 segmentation is separating real value, not just relabelling
+customers. Worth noting that Loyal / Repeat sits slightly below At Risk and
+Champions: those two segments are defined partly by high spend, while
+Loyal / Repeat takes every repeat buyer regardless of order size.
+→ `figures/17`
+
+**Takeaway:** the average customer is worth about R$17 in contribution, most of
+it earned on a single order. Retention spend has to clear that bar, and the
+per-customer prediction problem is not solvable with this data.
+
 ---
 
 ## Recommendations
 
 1. **Retention program** targeting the model's top propensity deciles plus the
    "Champions" and "At Risk" segments (recent high-spenders to convert, and
-   lapsing high-value customers to win back), together ~58% of revenue.
+   lapsing high-value customers to win back), together ~58% of revenue. Keep the
+   spend per customer under the ~R$17 of contribution an average customer
+   generates, and well under the ~R$33 for those two segments.
 2. **Regional fulfilment in the Northeast.** Freight scales at ~R$1.06/100 km,
    so the states shipping 1,300 to 2,300 km (BA, PE, CE, MA) are where a second
    distribution hub pays for itself: it would cut both the 20-26% freight burden
@@ -152,3 +225,9 @@ would help margin and retention at once.
 - 20-month dense window; forecasts beyond ~6 months are low-confidence.
 - Commission/payment rates are illustrative assumptions (see `src/config.py`).
 - Repeat-purchase signal is weak (AUC 0.61): use for prioritization, not gating.
+- Shipping distances are zip-prefix centroid to centroid, so they compare states
+  well but are too coarse for routing decisions.
+- BG/NBD is calibrated in aggregate but nearly blind per customer (corr 0.14) at
+  a 3% repeat rate. Observed contribution is the more honest value estimate here.
+- CLV is measured over the observation window, not a full customer lifetime, so
+  it is a floor rather than a true lifetime figure.

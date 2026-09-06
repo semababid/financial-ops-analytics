@@ -27,6 +27,12 @@ instead of working off one clean CSV.
   time goes from 5.7 to 20.1 days. It works out to about R$1.06 of freight per
   100 km, and at state level distance and freight burden correlate at 0.87,
   which is why São Paulo is cheap to serve and the northeast isn't.
+- The average customer is worth about **R$17** in contribution, and most of that
+  is earned on a single order. That number is the real constraint on retention
+  spend. I also fitted the textbook BG/NBD lifetime-value model, and it turned
+  out to be calibrated in aggregate but almost blind per customer (correlation
+  0.14 on a holdout), which is what a 3% repeat rate does to a model built on
+  purchase cadence.
 
 ![Monthly revenue & forecast](reports/figures/08_forecast_projection.png)
 
@@ -49,6 +55,12 @@ long average shipping distance pays for it, which is São Paulo's whole advantag
 |---|---|
 | ![Distance vs freight and delivery](reports/figures/14_distance_freight_delivery.png) | ![State distance vs freight burden](reports/figures/15_state_distance_vs_freight.png) |
 
+Cohort retention and what a customer is actually worth:
+
+| | |
+|---|---|
+| ![Cohort retention](reports/figures/16_cohort_retention.png) | ![Contribution per customer](reports/figures/17_clv_distribution.png) |
+
 The longer write-up with the recommendations is in
 [reports/SUMMARY.md](reports/SUMMARY.md).
 
@@ -65,7 +77,7 @@ python scripts/run_pipeline.py     # builds tables + runs every analysis
 
 `run_pipeline.py` does everything, but each stage also runs on its own:
 `python -m src.eda`, `src.revenue_forecast`, `src.churn_analysis`,
-`src.profitability`, `src.geo_analysis`. Charts get written to
+`src.profitability`, `src.geo_analysis`, `src.clv`. Charts get written to
 `reports/figures/`.
 
 There's also a SQL version of the core metrics (DuckDB reading the parquet files
@@ -116,8 +128,12 @@ A few decisions worth calling out, since they drove most of the numbers:
 - The distance work uses zip-prefix centroids, so a "distance" is really the
   distance between two postal areas, not two doorsteps. Fine for comparing
   states, too coarse for routing decisions.
-- Next thing on my list is a customer-lifetime-value model, though with 3%
-  repeat buyers the usual BG/NBD approach has very little to work with.
+- CLV is measured over the 20-month window rather than a real lifetime, so treat
+  the R$17 as a floor. And BG/NBD is in there mostly to show why it doesn't work
+  at this repeat rate, not because I'd ship its per-customer predictions.
+- If I carried on: model freight directly to size the fulfilment-centre case,
+  and test whether faster delivery actually causes repeat orders rather than
+  just correlating with them.
 
 ## Dataset
 
