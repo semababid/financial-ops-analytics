@@ -283,6 +283,13 @@ def run() -> None:
     plot_retention(curve)
     plot_clv_distribution(obs, seg_clv)
     obs.to_parquet(config.PROCESSED_DIR / "customer_value.parquet")
+    curve.reset_index().to_parquet(
+        config.PROCESSED_DIR / "cohort_retention.parquet", index=False
+    )
+    if seg_clv is not None:
+        seg_clv.reset_index().to_parquet(
+            config.PROCESSED_DIR / "segment_value.parquet", index=False
+        )
     print(f"\nFigures written to {config.FIGURES_DIR}")
     print("=" * 68)
 

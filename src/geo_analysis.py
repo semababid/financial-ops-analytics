@@ -223,6 +223,14 @@ def run() -> None:
     plot_distance_effects(band, deliv)
     plot_state_scatter(states)
     states.to_parquet(config.PROCESSED_DIR / "state_distance.parquet")
+    # Persist the band summaries so the dashboard can show them without
+    # redoing the million-row geolocation join.
+    band.reset_index().astype({"dist_band": str}).to_parquet(
+        config.PROCESSED_DIR / "distance_bands.parquet", index=False
+    )
+    deliv.reset_index().astype({"dist_band": str}).to_parquet(
+        config.PROCESSED_DIR / "distance_delivery.parquet", index=False
+    )
     print(f"\nFigures written to {config.FIGURES_DIR}")
     print("=" * 66)
 

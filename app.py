@@ -17,22 +17,25 @@ from src import config
 st.set_page_config(page_title="Olist Financial Ops Analytics", layout="wide", page_icon="📊")
 
 
+def _optional(name: str):
+    """Load a processed table if the stage that writes it has been run."""
+    path = config.PROCESSED_DIR / name
+    return pd.read_parquet(path) if path.exists() else None
+
+
 @st.cache_data
 def load():
     order_level = pd.read_parquet(config.ORDER_LEVEL)
     master = pd.read_parquet(config.ORDERS_MASTER)
     monthly = pd.read_parquet(config.MONTHLY_REVENUE)
-    forecast = (
-        pd.read_parquet(config.PROCESSED_DIR / "revenue_forecast.parquet")
-        if (config.PROCESSED_DIR / "revenue_forecast.parquet").exists()
-        else None
-    )
-    rfm = (
-        pd.read_parquet(config.PROCESSED_DIR / "rfm.parquet")
-        if (config.PROCESSED_DIR / "rfm.parquet").exists()
-        else None
-    )
-    return order_level, master, monthly, forecast, rfm
+    extras = {
+        name: _optional(f"{name}.parquet")
+        for name in (
+            "revenue_forecast", "rfm", "distance_bands", "distance_delivery",
+            "state_distance", "cohort_retention", "segment_value", "customer_value",
+        )
+    }
+    return order_level, master, monthly, extras
 
 
 if not config.MONTHLY_REVENUE.exists():
@@ -42,7 +45,8 @@ if not config.MONTHLY_REVENUE.exists():
     )
     st.stop()
 
-order_level, master, monthly, forecast, rfm = load()
+order_level, master, monthly, extras = load()
+forecast, rfm = extras["revenue_forecast"], extras["rfm"]
 valid = order_level[order_level["is_valid_revenue"]]
 
 # Trim to the dense analysis window for time-series views.
@@ -61,8 +65,9 @@ repeat = valid["customer_unique_id"].value_counts()
 k4.metric("Repeat-buyer share", f"{(repeat > 1).mean()*100:.1f}%")
 k5.metric("Avg order value", f"R$ {valid['items_value'].mean():.0f}")
 
-tab_rev, tab_churn, tab_profit = st.tabs(
-    ["📈 Revenue & Forecast", "🔁 Churn & RFM", "💰 Profitability"]
+tab_rev, tab_churn, tab_profit, tab_dist, tab_clv = st.tabs(
+    ["📈 Revenue & Forecast", "🔁 Churn & RFM", "💰 Profitability",
+     "🚚 Shipping Distance", "💎 Lifetime Value"]
 )
 
 # --- Revenue & forecast ----------------------------------------------------
@@ -149,3 +154,87 @@ with tab_profit:
         f"Contribution model: {config.COMMISSION_RATE:.0%} commission − "
         f"{config.PAYMENT_PROCESSING_RATE:.1%} payment fee (assumptions, see src/config.py)."
     )
+
+# --- Shipping distance -----------------------------------------------------
+with tab_dist:
+    bands, deliv, states = (
+        extras["distance_bands"], extras["distance_delivery"], extras["state_distance"]
+    )
+    if bands is None:
+        st.info("Run `python -m src.geo_analysis` to generate the distance analysis.")
+    else:
+        st.markdown(
+            "Freight and delivery both scale with seller→customer distance, which "
+            "is what explains the freight burden differences between states."
+        )
+        c1, c2 = st.columns(2)
+        with c1:
+            st.plotly_chart(
+                px.bar(bands, x="dist_band", y="avg_freight",
+                       title="Avg Freight by Distance Band",
+                       labels={"dist_band": "Distance (km)", "avg_freight": "Avg freight (R$)"},
+                       color="avg_freight", color_continuous_scale="Reds"),
+                width="stretch",
+            )
+        with c2:
+            if deliv is not None:
+                st.plotly_chart(
+                    px.bar(deliv, x="dist_band", y="avg_delivery_days",
+                           title="Avg Delivery Time by Distance Band",
+                           labels={"dist_band": "Distance (km)",
+                                   "avg_delivery_days": "Avg delivery (days)"},
+                           color="avg_delivery_days", color_continuous_scale="Blues"),
+                    width="stretch",
+                )
+        if states is not None:
+            s = states.reset_index()
+            st.plotly_chart(
+                px.scatter(s, x="avg_distance_km", y="freight_burden_pct",
+                           size="gmv", text="customer_state", size_max=55,
+                           title="Freight Burden vs Shipping Distance by State (bubble = GMV)",
+                           labels={"avg_distance_km": "Avg seller→customer distance (km)",
+                                   "freight_burden_pct": "Freight as % of GMV"}),
+                width="stretch",
+            )
+        st.caption(
+            "Distances are haversine between zip-prefix centroids, so they compare "
+            "states well but are too coarse for routing decisions."
+        )
+
+# --- Lifetime value --------------------------------------------------------
+with tab_clv:
+    curve, segval, custval = (
+        extras["cohort_retention"], extras["segment_value"], extras["customer_value"]
+    )
+    if custval is None:
+        st.info("Run `python -m src.clv` to generate the lifetime-value analysis.")
+    else:
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Avg GMV per customer", f"R$ {custval['gmv'].mean():.2f}")
+        c2.metric("Avg contribution per customer", f"R$ {custval['contribution'].mean():.2f}")
+        top10 = custval["contribution"].nlargest(len(custval) // 10).sum()
+        c3.metric("Contribution held by top 10%",
+                  f"{top10 / custval['contribution'].sum() * 100:.0f}%")
+        st.caption(
+            "That contribution figure is roughly the ceiling on what can be spent "
+            "to acquire or win back a customer."
+        )
+        c1, c2 = st.columns(2)
+        with c1:
+            if curve is not None:
+                st.plotly_chart(
+                    px.line(curve, x="offset", y="retention_pct", markers=True,
+                            title="Cohort Retention by Month Since First Order",
+                            labels={"offset": "Months after first order",
+                                    "retention_pct": "% ordering again"}),
+                    width="stretch",
+                )
+        with c2:
+            if segval is not None:
+                st.plotly_chart(
+                    px.bar(segval.sort_values("contribution"), x="contribution", y="segment",
+                           orientation="h", title="Avg Contribution per Customer by Segment",
+                           color="contribution", color_continuous_scale="Greens",
+                           labels={"contribution": "Contribution (R$)", "segment": ""}),
+                    width="stretch",
+                )
