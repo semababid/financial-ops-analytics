@@ -8,10 +8,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = PROJECT_ROOT / "data"
 RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
+# Small pre-aggregated tables for the dashboard. Unlike processed/, these are
+# committed, so the deployed Streamlit app has data without the raw CSVs.
+DASHBOARD_DIR = DATA_DIR / "dashboard"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 FIGURES_DIR = REPORTS_DIR / "figures"
 
-for _d in (PROCESSED_DIR, FIGURES_DIR):
+for _d in (PROCESSED_DIR, DASHBOARD_DIR, FIGURES_DIR):
     _d.mkdir(parents=True, exist_ok=True)
 
 # raw CSVs

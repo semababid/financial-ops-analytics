@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src import (
     churn_analysis,
     clv,
+    dashboard_data,
     data_cleaning,
     eda,
     geo_analysis,
@@ -33,6 +34,7 @@ def main() -> None:
         ("Profitability analysis", profitability.run),
         ("Shipping distance analysis", geo_analysis.run),
         ("Customer lifetime value", clv.run),
+        ("Dashboard data bundle", dashboard_data.run),
     ]
     for i, (label, fn) in enumerate(steps, 1):
         print(f"\n{'#' * 70}\n# STEP {i}/{len(steps)}: {label}\n{'#' * 70}")

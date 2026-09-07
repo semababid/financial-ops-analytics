@@ -77,8 +77,8 @@ python scripts/run_pipeline.py     # builds tables + runs every analysis
 
 `run_pipeline.py` does everything, but each stage also runs on its own:
 `python -m src.eda`, `src.revenue_forecast`, `src.churn_analysis`,
-`src.profitability`, `src.geo_analysis`, `src.clv`. Charts get written to
-`reports/figures/`.
+`src.profitability`, `src.geo_analysis`, `src.clv`, `src.dashboard_data`.
+Charts get written to `reports/figures/`.
 
 There's also a SQL version of the core metrics (DuckDB reading the parquet files
 directly, no database to set up):
@@ -95,6 +95,13 @@ streamlit run app.py
 ```
 
 ![Streamlit dashboard](reports/figures/dashboard.png)
+
+The dashboard reads a small pre-aggregated bundle in `data/dashboard/` (about
+40 KB, committed) rather than the intermediate tables, which are ~34 MB and
+stay out of the repo. That means it runs on a fresh clone with no raw data,
+which is also what makes it deployable straight to Streamlit Community Cloud:
+point a new app at this repo with `app.py` as the entrypoint, no secrets or
+config needed. `python scripts/run_pipeline.py` rebuilds the bundle.
 
 ## How the data is organized
 

@@ -1,4 +1,5 @@
-# Data — raw CSVs are large (~120MB) and reproducible from Kaggle, so not committed.
+# Data. Raw CSVs (~120MB) and the intermediate tables (~34MB) are rebuildable
+# from Kaggle, so neither is committed.
 data/raw/
 data/processed/
 
@@ -17,5 +18,7 @@ env/
 .vscode/
 .claude/
 
-# Notebook output that is large
-*.parquet
+# data/dashboard/ is deliberately NOT ignored: ~40KB of pre-aggregated tables so
+# the deployed Streamlit app has data without the raw CSVs (see
+# src/dashboard_data.py). The bulky parquet lives under data/processed/, which
+# is excluded by directory above.
