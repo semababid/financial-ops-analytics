@@ -1,5 +1,7 @@
 # Financial Operations Analytics
 
+**[Live dashboard →](https://financial-ops-analytics.streamlit.app)**
+
 This is an end-to-end analysis of the public **Olist** Brazilian e-commerce
 dataset, looking at it from a finance/ops angle: where the revenue comes from,
 whether customers come back, and which parts of the business actually make
