@@ -1,0 +1,41 @@
+# Optional MySQL layer.
+#
+# The analysis itself runs on DuckDB over parquet and needs no server. This
+# spins up a MySQL instance so the same queries can be run against a real
+# row-store database, which is closer to where this data would live in
+# production.
+#
+#   docker compose up -d                 # start MySQL
+#   python -m src.mysql_loader           # load tables + run the queries
+#   docker compose down                  # stop it
+#   docker compose down -v               # stop it and delete the data volume
+#
+# Nothing else in the project depends on this.
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: olist-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: olist
+      MYSQL_DATABASE: olist
+      MYSQL_USER: olist
+      MYSQL_PASSWORD: olist
+    ports:
+      # Host 3307 so it won't collide with a MySQL already running locally.
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    # No custom command: caching_sha2_password is already the 8.x default, and
+    # --default-authentication-plugin was removed in MySQL 8.4.
+    healthcheck:
+      # The loader waits on this before connecting.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uolist", "-polist"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+volumes:
+  mysql_data:

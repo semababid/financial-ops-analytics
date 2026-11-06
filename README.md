@@ -90,6 +90,35 @@ python -m src.sql_runner                 # all queries
 python -m src.sql_runner top_categories  # just one
 ```
 
+### The same queries on MySQL (optional)
+
+DuckDB is an embedded OLAP engine, which is why it can query parquet with no
+server. MySQL is the row-store you would actually find holding this data in
+production, so I implemented the same five queries there too and check that
+both engines return the same numbers.
+
+```bash
+pip install -r requirements-mysql.txt
+docker compose up -d                      # MySQL 8.4 on port 3307
+python -m src.mysql_loader                # load the tables, run the queries
+python -m src.mysql_loader --compare      # diff DuckDB vs MySQL results
+docker compose down                       # or: down -v to drop the data too
+```
+
+The comparison is the interesting part. It runs every query on both engines and
+checks the outputs cell by cell:
+
+```
+monthly_revenue        rows=24   max numeric diff=0.0000  MATCH
+repeat_rate            rows=1    max numeric diff=0.0000  MATCH
+top_categories         rows=10   max numeric diff=0.0000  MATCH
+state_profitability    rows=10   max numeric diff=0.0000  MATCH
+delivery_vs_review     rows=5    max numeric diff=0.0000  MATCH
+```
+
+This layer is entirely optional. Nothing else in the project depends on it, and
+the dashboard and its deployment never touch MySQL.
+
 And a Streamlit dashboard:
 
 ```bash
